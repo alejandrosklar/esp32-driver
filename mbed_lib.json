@@ -35,7 +35,7 @@
         },
         "wifi-serial-fc": {
             "help": "Serial Flow Control",
-            "value": true
+            "value": false
         },
         "provide-default": {
             "help": "Provide default WifiInterface. [true/false]",
