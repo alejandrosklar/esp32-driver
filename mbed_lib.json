@@ -31,7 +31,11 @@
         },
         "wifi-baudrate": {
             "help": "Serial baudrate",
-            "value": "230400"
+            "value": "115200"
+        },
+        "wifi-serial-fc": {
+            "help": "Serial Flow Control",
+            "value": true
         },
         "provide-default": {
             "help": "Provide default WifiInterface. [true/false]",
@@ -39,6 +43,15 @@
         }
     },
     "target_overrides": {
+        "NUCLEO_L073RZ": {
+            "esp32.wifi-en": "NC",
+            "esp32.wifi-io0": "NC",
+            "esp32.wifi-tx": "D8",
+            "esp32.wifi-rx": "D2",
+            "esp32.wifi-debug": true,
+            "esp32.wifi-rts": "NC",
+            "esp32.wifi-cts": "NC"
+        },
         "GR_LYCHEE": {
             "esp32.wifi-en" : "P5_3",
             "esp32.wifi-io0": "P3_14",

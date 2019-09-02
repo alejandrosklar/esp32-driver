@@ -51,7 +51,7 @@ ESP32 * ESP32::getESP32Inst(bool debug)
 ESP32::ESP32(PinName en, PinName io0, PinName tx, PinName rx, bool debug,
     PinName rts, PinName cts, int baudrate)
     : _p_wifi_en(NULL), _p_wifi_io0(NULL), _init_end_common(false), _init_end_wifi(false)
-    , _serial(tx, rx, ESP32_DEFAULT_BAUD_RATE), _parser(&_serial, "\r\n")
+    , _serial(tx, rx, baudrate), _parser(&_serial, "\r\n")
     , _packets(0), _packets_end(&_packets)
     , _id_bits(0), _id_bits_close(0), _server_act(false)
     , _wifi_status(STATUS_DISCONNECTED)
@@ -90,7 +90,7 @@ ESP32::ESP32(PinName en, PinName io0, PinName tx, PinName rx, bool debug,
         _flow_control = 0;
     }
 
-    _serial.set_baud(ESP32_DEFAULT_BAUD_RATE);
+    _serial.set_baud(_baudrate);
     debugOn(debug);
 
     _parser.oob("+IPD", callback(this, &ESP32::_packet_handler));
@@ -122,6 +122,7 @@ ESP32::ESP32(PinName en, PinName io0, PinName tx, PinName rx, bool debug,
 void ESP32::debugOn(bool debug)
 {
     _parser.debug_on((debug) ? 1 : 0);
+    _debug = debug;
 }
 
 bool ESP32::get_version_info(char * ver_info, int buf_size)
@@ -185,7 +186,7 @@ void ESP32::_startup_common()
         return;
     }
 
-    _serial.set_baud(ESP32_DEFAULT_BAUD_RATE);
+    _serial.set_baud(MBED_CONF_ESP32_WIFI_BAUDRATE);
     if (_p_wifi_io0 != NULL) {
         _p_wifi_io0->write(1);
     }
@@ -374,16 +375,17 @@ bool ESP32::reset(void)
         if (_parser.send("AT+RST")
             && _parser.recv("OK")) {
             _serial.set_baud(ESP32_DEFAULT_BAUD_RATE);
-#if DEVICE_SERIAL_FC
+#if MBED_CONF_ESP32_WIFI_SERIAL_FC
             _serial.set_flow_control(SerialBase::Disabled);
 #endif
+            setTimeout(10000);
             _parser.recv("ready");
             _clear_socket_packets(ESP32_ALL_SOCKET_IDS);
 
             if (_parser.send("AT+UART_CUR=%d,8,1,0,%d", _baudrate, _flow_control)
                 && _parser.recv("OK")) {
                 _serial.set_baud(_baudrate);
-#if DEVICE_SERIAL_FC
+#if MBED_CONF_ESP32_WIFI_SERIAL_FC
                 switch (_flow_control) {
                     case 1:
                         _serial.set_flow_control(SerialBase::RTS, _rts);
@@ -402,8 +404,9 @@ bool ESP32::reset(void)
 #endif
             }
 
-            ThisThread::sleep_for(5);
-
+            _parser.send("ATE0");
+            _parser.recv("OK");
+ 
             uint8_t wk_ver[4+1]; /* It needs 1 byte extra. */
 
             if (_parser.send("AT+GMR")
@@ -661,36 +664,46 @@ int ESP32::scan(WiFiAccessPoint *res, unsigned limit)
     nsapi_wifi_ap_t ap;
 
     if (!_init_end_wifi) {
+
+        for (int i = 0; i < 5; i++) {
+            _smutex.lock();
+            if (_startup_wifi()) i = 5;
+            _smutex.unlock();
+            ThisThread::sleep_for(1500);
+        }
+    }
+
+    if (_init_end_wifi) {
         _smutex.lock();
-        _startup_wifi();
-        _smutex.unlock();
-        ThisThread::sleep_for(1500);
-    }
-
-    _smutex.lock();
-    setTimeout(5000);
-    if (!_parser.send("AT+CWLAP")) {
-        _smutex.unlock();
-        return NSAPI_ERROR_DEVICE_ERROR;
-    }
-
-    while (recv_ap(&ap)) {
-        if (cnt < limit) {
-            res[cnt] = WiFiAccessPoint(ap);
+        setTimeout(5000);
+        if (!_parser.send("AT+CWLAP")) {
+            _smutex.unlock();
+            return NSAPI_ERROR_DEVICE_ERROR;
         }
 
-        cnt++;
-        if ((limit != 0) && (cnt >= limit)) {
-            setTimeout(10);
-            _parser.recv("OK");
-            break;
+        while (recv_ap(&ap)) {
+            if (cnt < limit) {
+                res[cnt] = WiFiAccessPoint(ap);
+            }
+ 
+            cnt++;
+            if ((limit != 0) && (cnt >= limit)) {
+                setTimeout(10);
+                _parser.recv("OK");
+                break;
+            }
+            setTimeout(500);
         }
-        setTimeout(500);
+
+        setTimeout();
+        _smutex.unlock();
+    } else {
+        cnt = -1;
+        if (_debug) printf("ESP32 did not initialize successfully\r\n");
     }
-    setTimeout();
-    _smutex.unlock();
 
     return cnt;
+
 }
 
 bool ESP32::isConnected(void)
