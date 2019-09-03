@@ -187,6 +187,7 @@ void ESP32::_startup_common()
     }
 
     _serial.set_baud(MBED_CONF_ESP32_WIFI_BAUDRATE);
+    setTimeout(10000);
     if (_p_wifi_io0 != NULL) {
         _p_wifi_io0->write(1);
     }
@@ -196,10 +197,10 @@ void ESP32::_startup_common()
         _p_wifi_en->write(1);
         _parser.recv("ready");
     } else {
-        setTimeout(100);
         _parser.recv("ready");
     }
-
+    setTimeout();
+    
     reset();
 
     _init_end_common = true;
@@ -375,9 +376,8 @@ bool ESP32::reset(void)
         if (_parser.send("AT+RST")
             && _parser.recv("OK")) {
             _serial.set_baud(ESP32_DEFAULT_BAUD_RATE);
-#if MBED_CONF_ESP32_WIFI_SERIAL_FC
             _serial.set_flow_control(SerialBase::Disabled);
-#endif
+
             setTimeout(10000);
             _parser.recv("ready");
             _clear_socket_packets(ESP32_ALL_SOCKET_IDS);
@@ -403,6 +403,7 @@ bool ESP32::reset(void)
                 }
 #endif
             }
+            setTimeout();
 
             _parser.send("ATE0");
             _parser.recv("OK");
@@ -676,10 +677,12 @@ int ESP32::scan(WiFiAccessPoint *res, unsigned limit)
     if (_init_end_wifi) {
         _smutex.lock();
         setTimeout(5000);
-        if (!_parser.send("AT+CWLAP")) {
+        _parser.send("AT+CWLAP");
+        
+        /*if (!_parser.send("AT+CWLAP")) {
             _smutex.unlock();
             return NSAPI_ERROR_DEVICE_ERROR;
-        }
+        }*/
 
         while (recv_ap(&ap)) {
             if (cnt < limit) {
@@ -688,11 +691,11 @@ int ESP32::scan(WiFiAccessPoint *res, unsigned limit)
  
             cnt++;
             if ((limit != 0) && (cnt >= limit)) {
-                setTimeout(10);
+                setTimeout();
                 _parser.recv("OK");
                 break;
             }
-            setTimeout(500);
+            setTimeout(1000);
         }
 
         setTimeout();
@@ -980,7 +983,7 @@ bool ESP32::recv_ap(nsapi_wifi_ap_t *ap)
     const char keyword_1[6] = "\nOK\r\n";
     int idx_0 = 0;
     int idx_1 = 0;
-
+    
     while (true) {
         c = _parser.getc();
         if (c < 0) {
@@ -1002,12 +1005,10 @@ bool ESP32::recv_ap(nsapi_wifi_ap_t *ap)
         if (idx_0 >= (int)(sizeof(keyword_0) - 1)) {
             int sec;
             uint8_t work_buf[6+1]; /* It needs 1 byte extra. */
-            int8_t  work_rssi[2];  /* It needs 1 byte extra. */
 
-            ret = _parser.recv("(%d,\"%32[^\"]\",%hhd,\"%hhx:%hhx:%hhx:%hhx:%hhx:%hhx\",%hhu)", &sec, ap->ssid,
-                               &work_rssi[0], &work_buf[0], &work_buf[1], &work_buf[2], &work_buf[3], &work_buf[4],
-                               &work_buf[5], &ap->channel);
-            ap->rssi = work_rssi[0];
+            ret = _parser.recv("(%d,\"%32[^\"]\",%hhd,\"%hhx:%hhx:%hhx:%hhx:%hhx:%hhx\",%hhu)", &sec, ap->ssid, &ap->rssi, 
+                               &work_buf[0], &work_buf[1], &work_buf[2], &work_buf[3], &work_buf[4], &work_buf[5],&ap->channel);
+                                
             memcpy(ap->bssid, work_buf, 6);
             ap->security = sec < 5 ? (nsapi_security_t)sec : NSAPI_SECURITY_UNKNOWN;
             break;

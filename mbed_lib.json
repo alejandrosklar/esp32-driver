@@ -1,6 +1,14 @@
 {
     "name": "esp32",
     "config": {
+        "wifi-ssid": {
+            "help": "WiFi SSID",
+            "value": "\"Fios-VSFJ2\""
+        },
+        "wifi-password": {
+            "help": "WiFi Password",
+            "value": "\"claw9377tag688any\""
+        },
         "wifi-en": {
             "help": "Enable pin",
             "value": "NC"
@@ -19,7 +27,7 @@
         },
         "wifi-debug": {
             "help": "Enable debugging",
-            "value": false
+            "value": true
         },
         "wifi-rts": {
             "help": "Serial RTS pin",
@@ -35,7 +43,7 @@
         },
         "wifi-serial-fc": {
             "help": "Serial Flow Control",
-            "value": false
+            "value": true
         },
         "provide-default": {
             "help": "Provide default WifiInterface. [true/false]",
@@ -49,8 +57,8 @@
             "esp32.wifi-tx": "D8",
             "esp32.wifi-rx": "D2",
             "esp32.wifi-debug": true,
-            "esp32.wifi-rts": "NC",
-            "esp32.wifi-cts": "NC"
+            "esp32.wifi-rts": "PA_12",
+            "esp32.wifi-cts": "PA_11"
         },
         "GR_LYCHEE": {
             "esp32.wifi-en" : "P5_3",

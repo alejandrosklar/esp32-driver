@@ -275,6 +275,7 @@ private:
     PinName _cts;
     int _flow_control;
     uint32_t last_timeout_ms;
+    bool _debug;
 
     std::vector<int> _accept_id;
     uint32_t _id_bits;
@@ -353,11 +354,11 @@ public:
     typedef struct {
         uint16_t  adv_int_min;       /**< minimum value of advertising interval; range: 0x0020 ~ 0x4000 */
         uint16_t  adv_int_max;       /**< maximum value of advertising interval; range: 0x0020 ~ 0x4000 */
-        uint8_t   adv_type;          /**< 0FADV_TYPE_IND, 2FADV_TYPE_SCAN_IND, 3FADV_TYPE_NONCONN_IND */
-        uint8_t   own_addr_type;     /**< own BLE address type; 0FBLE_ADDR_TYPE_PUBLIC, 1FBLE_ADDR_TYPE_RANDOM */
+        uint8_t   adv_type;          /**< 0ï¿½FADV_TYPE_IND, 2ï¿½FADV_TYPE_SCAN_IND, 3ï¿½FADV_TYPE_NONCONN_IND */
+        uint8_t   own_addr_type;     /**< own BLE address type; 0ï¿½FBLE_ADDR_TYPE_PUBLIC, 1ï¿½FBLE_ADDR_TYPE_RANDOM */
         uint8_t   channel_map;       /**< channel of advertising; ADV_CHNL_~ */
         uint8_t   adv_filter_policy; /**< filter policy of advertising; ADV_FILTER_ALLOW_SCAN_~ */
-        uint8_t   peer_addr_type;    /**< remote BLE address type; 0FPUBLIC, 1FRANDOM */
+        uint8_t   peer_addr_type;    /**< remote BLE address type; 0ï¿½FPUBLIC, 1ï¿½FRANDOM */
         uint8_t   peer_addr[6];      /**< remote BLE address */
     } advertising_param_t;
 
